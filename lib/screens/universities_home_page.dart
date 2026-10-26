@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:universities_app/models/university.dart';
+import 'package:universities_app/widgets/app_bar_component.dart';
 import 'package:universities_app/widgets/university_card.dart';
 
 class UniversitiesHomePage extends StatelessWidget {
@@ -15,7 +16,10 @@ class UniversitiesHomePage extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(title: const Text('Universidades'));
+    return const AppBarComponent(
+      title: 'Universidades',
+      icon: Icons.school_outlined,
+    );
   }
 
   Widget _buildBody() {
