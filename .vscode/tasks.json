@@ -1,0 +1,75 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build & Install APK",
+        "type": "shell",
+        "command": "flutter build apk --target-platform android-arm64 --release && flutter install",
+        "problemMatcher": []
+      },
+      {
+        "label": "Build & Install APK (emulator)",
+        "type": "shell",
+        "command": "flutter build apk --target-platform android-x64 --release && flutter install",
+        "problemMatcher": []
+      },
+      {
+        "label": "Build APK",
+        "type": "shell",
+        "command": "flutter build apk --target-platform android-arm64 --release",
+        "problemMatcher": []
+      },
+      {
+        "label": "Build App Bundle",
+        "type": "shell",
+        "command": "flutter build appbundle",
+        "problemMatcher": []
+      },
+      {
+        "label": "Compile Flutter (no APK)",
+        "type": "shell",
+        "command": "flutter build bundle --debug",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Generate Padded Splash Icon",
+        "type": "shell",
+        "command": "python scripts/generate_padded_splash.py",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Regenerate Native Splash",
+        "type": "shell",
+        "command": "dart run flutter_native_splash:create",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Regenerate Launcher Icons",
+        "type": "shell",
+        "command": "dart run flutter_launcher_icons",
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Prepare Image + Native Splash",
+        "dependsOrder": "sequence",
+        "dependsOn": [
+          "Generate Padded Splash Icon",
+          "Regenerate Native Splash"
+        ],
+        "problemMatcher": []
+      }
+    ]
+  }
+  
