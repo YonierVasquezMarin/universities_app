@@ -21,7 +21,7 @@ class UniversityCard extends StatelessWidget {
   static const double _rowGap = 8;
   static const double _iconSize = 18;
   static const double _iconGap = 8;
-  static const double _titleLineCount = 2;
+  static const int _titleLineCount = 1;
   static const double _fallbackTitleFontSize = 16;
   static const double _fallbackTitleHeightFactor = 1.5;
   static const double _fallbackBodyFontSize = 14;
@@ -86,20 +86,13 @@ class UniversityCard extends StatelessWidget {
   Widget _buildFullContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(_contentPadding),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildFullDetails(context)),
-          const SizedBox(width: _sectionGap),
-          _buildCountryCodeChip(context),
-        ],
-      ),
+      child: _buildFullDetails(context),
     );
   }
 
   Widget _buildFullDetails(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildName(context),
         const SizedBox(height: _sectionGap),
@@ -115,12 +108,27 @@ class UniversityCard extends StatelessWidget {
           label: _buildStudentsLabel(),
         ),
         const SizedBox(height: _rowGap),
-        _buildInfoRow(
-          context,
-          icon: Icons.language,
-          label: _buildDomainLabel(),
-        ),
+        _buildFullFooter(context),
       ],
+    );
+  }
+
+  Widget _buildFullFooter(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(child: _buildDomainRow(context)),
+        const SizedBox(width: _sectionGap),
+        _buildCountryCodeChip(context),
+      ],
+    );
+  }
+
+  Widget _buildDomainRow(BuildContext context) {
+    return _buildInfoRow(
+      context,
+      icon: Icons.language,
+      label: _buildDomainLabel(),
     );
   }
 
@@ -232,18 +240,18 @@ class UniversityCard extends StatelessWidget {
 
   Widget _buildName(BuildContext context) {
     return SizedBox(
-      height: _readTwoLineTitleHeight(context),
+      height: _readTitleHeight(context),
       width: double.infinity,
       child: Text(
         university.name,
-        maxLines: 2,
+        maxLines: _titleLineCount,
         overflow: TextOverflow.ellipsis,
         style: _readTitleStyle(context),
       ),
     );
   }
 
-  double _readTwoLineTitleHeight(BuildContext context) {
+  double _readTitleHeight(BuildContext context) {
     final titleStyle = _readTitleStyle(context);
     final fontSize = titleStyle.fontSize ?? _fallbackTitleFontSize;
     final heightFactor = titleStyle.height ?? _fallbackTitleHeightFactor;
