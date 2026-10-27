@@ -27,16 +27,16 @@ class UniversityListControls extends StatelessWidget {
         left: _horizontalPadding,
         right: _horizontalPadding,
       ),
-      child: _buildControls(),
+      child: _buildControls(context),
     );
   }
 
-  Widget _buildControls() {
+  Widget _buildControls(BuildContext context) {
     return Row(
       children: [
         _buildLoadedDataFilter(),
         const Spacer(),
-        _buildLayoutSelector(),
+        _buildLayoutSelector(context),
       ],
     );
   }
@@ -56,12 +56,12 @@ class UniversityListControls extends StatelessWidget {
     onLoadedDataFilterChanged(showsOnlyLoadedData);
   }
 
-  Widget _buildLayoutSelector() {
+  Widget _buildLayoutSelector(BuildContext context) {
     return SegmentedButton<UniversityCardLayout>(
       segments: _buildLayoutSegments(),
       selected: {layout},
       showSelectedIcon: false,
-      style: _buildLayoutSelectorStyle(),
+      style: _buildLayoutSelectorStyle(context),
       onSelectionChanged: _notifyLayoutSelection,
     );
   }
@@ -86,11 +86,23 @@ class UniversityListControls extends StatelessWidget {
     );
   }
 
-  ButtonStyle _buildLayoutSelectorStyle() {
-    return const ButtonStyle(
+  ButtonStyle _buildLayoutSelectorStyle(BuildContext context) {
+    return ButtonStyle(
       visualDensity: VisualDensity.compact,
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      side: _buildLayoutSelectorBorder(context),
     );
+  }
+
+  WidgetStateProperty<BorderSide> _buildLayoutSelectorBorder(
+    BuildContext context,
+  ) {
+    final borderColor = _readLoadedDataChipBorderColor(context);
+    return WidgetStatePropertyAll(BorderSide(color: borderColor));
+  }
+
+  Color _readLoadedDataChipBorderColor(BuildContext context) {
+    return Theme.of(context).colorScheme.outlineVariant;
   }
 
   void _notifyLayoutSelection(Set<UniversityCardLayout> selection) {
