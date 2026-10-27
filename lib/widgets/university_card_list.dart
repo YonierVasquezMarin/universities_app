@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:universities_app/models/university.dart';
+import 'package:universities_app/services/university_service.dart';
 import 'package:universities_app/widgets/university_card.dart';
 
 class UniversityCardList extends StatefulWidget {
@@ -25,9 +26,17 @@ class _UniversityCardListState extends State<UniversityCardList> {
   static const double _fullMaxWidth = 480;
   static const double _gridMaxWidth = 720;
   static const int _gridColumnCount = 2;
+  static const int _visibleUniversityLimit = 20;
   static const String _emptyMessage = 'Sin datos';
+  static const String _errorMessage = 'No fue posible cargar las universidades';
+  static const String _retryLabel = 'Reintentar';
+  static const double _statusGap = 12;
   static const Duration _fadeDuration = Duration(milliseconds: 180);
 
+  final UniversityService _universityService = UniversityService();
+  List<University> _universities = const <University>[];
+  bool _isLoadingUniversities = true;
+  bool _failedToLoadUniversities = false;
   late UniversityCardLayout _visibleLayout;
   late bool _visibleShowsOnlyLoadedData;
   double _contentOpacity = 1;
@@ -37,6 +46,58 @@ class _UniversityCardListState extends State<UniversityCardList> {
   void initState() {
     super.initState();
     _rememberInitialSelection();
+    unawaited(_loadUniversities());
+  }
+
+  Future<void> _loadUniversities() async {
+    try {
+      final universities = await _universityService.loadUniversities();
+      _showLoadedUniversities(universities);
+    } catch (_) {
+      _showUniversityLoadFailure();
+    }
+  }
+
+  void _showLoadedUniversities(List<University> universities) {
+    if (_widgetIsUnmounted()) {
+      return;
+    }
+    setState(() {
+      _universities = _readUniversitiesToPaint(universities);
+      _isLoadingUniversities = false;
+      _failedToLoadUniversities = false;
+    });
+  }
+
+  List<University> _readUniversitiesToPaint(List<University> universities) {
+    return universities.take(_visibleUniversityLimit).toList();
+  }
+
+  void _showUniversityLoadFailure() {
+    if (_widgetIsUnmounted()) {
+      return;
+    }
+    setState(() {
+      _isLoadingUniversities = false;
+      _failedToLoadUniversities = true;
+    });
+  }
+
+  bool _widgetIsUnmounted() {
+    final widgetIsUnmounted = !mounted;
+    return widgetIsUnmounted;
+  }
+
+  void _retryLoadUniversities() {
+    _markUniversitiesAsLoading();
+    unawaited(_loadUniversities());
+  }
+
+  void _markUniversitiesAsLoading() {
+    setState(() {
+      _isLoadingUniversities = true;
+      _failedToLoadUniversities = false;
+    });
   }
 
   void _rememberInitialSelection() {
@@ -113,19 +174,48 @@ class _UniversityCardListState extends State<UniversityCardList> {
   }
 
   Widget _buildVisibleContent(BuildContext context) {
+    if (_isLoadingUniversities) {
+      return _buildLoadingIndicator();
+    }
+    if (_failedToLoadUniversities) {
+      return _buildLoadError(context);
+    }
     final universities = _readVisibleUniversities();
     if (_visibleUniversitiesAreEmpty(universities)) {
-      return _buildEmptyMessage(context);
+      return _buildStatusMessage(context, _emptyMessage);
     }
     return _buildScrollableCards(universities);
   }
 
+  Widget _buildLoadingIndicator() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildLoadError(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildStatusText(context, _errorMessage),
+          const SizedBox(height: _statusGap),
+          _buildRetryButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRetryButton() {
+    return TextButton(
+      onPressed: _retryLoadUniversities,
+      child: const Text(_retryLabel),
+    );
+  }
+
   List<University> _readVisibleUniversities() {
-    final universities = _createPreviewUniversities();
     if (_showsEveryUniversity()) {
-      return universities;
+      return _universities;
     }
-    return _keepUniversitiesWithUserProvidedData(universities);
+    return _keepUniversitiesWithUserProvidedData(_universities);
   }
 
   bool _showsEveryUniversity() {
@@ -148,9 +238,15 @@ class _UniversityCardListState extends State<UniversityCardList> {
     return universitiesAreEmpty;
   }
 
-  Widget _buildEmptyMessage(BuildContext context) {
-    return Center(
-      child: Text(_emptyMessage, style: _readEmptyMessageStyle(context)),
+  Widget _buildStatusMessage(BuildContext context, String message) {
+    return Center(child: _buildStatusText(context, message));
+  }
+
+  Widget _buildStatusText(BuildContext context, String message) {
+    return Text(
+      message,
+      textAlign: TextAlign.center,
+      style: _readEmptyMessageStyle(context),
     );
   }
 
@@ -163,27 +259,121 @@ class _UniversityCardListState extends State<UniversityCardList> {
   }
 
   Widget _buildScrollableCards(List<University> universities) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _horizontalPadding,
-        vertical: _verticalPadding,
-      ),
-      child: _buildCenteredContent(universities),
-    );
-  }
-
-  Widget _buildCenteredContent(List<University> universities) {
     return Align(
       alignment: Alignment.topCenter,
-      child: _buildWidthLimitedContent(universities),
+      child: _buildWidthLimitedList(universities),
     );
   }
 
-  Widget _buildWidthLimitedContent(List<University> universities) {
+  Widget _buildWidthLimitedList(List<University> universities) {
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: _readMaxContentWidth()),
-      child: _buildCards(universities),
+      constraints: BoxConstraints(maxWidth: _readScrollViewportWidth()),
+      child: _buildLazyCards(universities),
     );
+  }
+
+  double _readScrollViewportWidth() {
+    return _readMaxContentWidth() + (_horizontalPadding * 2);
+  }
+
+  Widget _buildLazyCards(List<University> universities) {
+    if (_usesGridLayout()) {
+      return _buildLazyGrid(universities);
+    }
+    return _buildLazyFullList(universities);
+  }
+
+  Widget _buildLazyFullList(List<University> universities) {
+    return ListView.separated(
+      padding: _readListPadding(),
+      itemCount: universities.length,
+      separatorBuilder: _buildCardSeparator,
+      itemBuilder: (context, index) => _buildListedCard(universities, index),
+    );
+  }
+
+  Widget _buildListedCard(List<University> universities, int index) {
+    return _buildCard(universities[index]);
+  }
+
+  Widget _buildLazyGrid(List<University> universities) {
+    return ListView.separated(
+      padding: _readListPadding(),
+      itemCount: _readGridRowCount(universities),
+      separatorBuilder: _buildCardSeparator,
+      itemBuilder: (context, index) => _buildGridRow(universities, index),
+    );
+  }
+
+  int _readGridRowCount(List<University> universities) {
+    return (universities.length / _gridColumnCount).ceil();
+  }
+
+  Widget _buildCardSeparator(BuildContext context, int index) {
+    return const SizedBox(height: _cardGap);
+  }
+
+  EdgeInsets _readListPadding() {
+    return const EdgeInsets.symmetric(
+      horizontal: _horizontalPadding,
+      vertical: _verticalPadding,
+    );
+  }
+
+  Widget _buildGridRow(List<University> universities, int rowIndex) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: _buildGridRowChildren(universities, rowIndex),
+    );
+  }
+
+  List<Widget> _buildGridRowChildren(
+    List<University> universities,
+    int rowIndex,
+  ) {
+    final children = <Widget>[];
+    for (var column = 0; column < _gridColumnCount; column++) {
+      _appendGridRowChild(children, universities, rowIndex, column);
+    }
+    return children;
+  }
+
+  void _appendGridRowChild(
+    List<Widget> children,
+    List<University> universities,
+    int rowIndex,
+    int column,
+  ) {
+    if (_needsGapBeforeGridColumn(column)) {
+      children.add(const SizedBox(width: _cardGap));
+    }
+    children.add(_buildGridRowSlot(universities, rowIndex, column));
+  }
+
+  bool _needsGapBeforeGridColumn(int column) {
+    final needsGap = column > 0;
+    return needsGap;
+  }
+
+  Widget _buildGridRowSlot(
+    List<University> universities,
+    int rowIndex,
+    int column,
+  ) {
+    final index = _readGridItemIndex(rowIndex, column);
+    if (_indexIsOutsideUniversities(universities, index)) {
+      return const Expanded(child: SizedBox.shrink());
+    }
+    return Expanded(child: _buildCard(universities[index]));
+  }
+
+  int _readGridItemIndex(int rowIndex, int column) {
+    return (rowIndex * _gridColumnCount) + column;
+  }
+
+  bool _indexIsOutsideUniversities(List<University> universities, int index) {
+    final indexIsOutsideUniversities = index >= universities.length;
+    return indexIsOutsideUniversities;
   }
 
   double _readMaxContentWidth() {
@@ -198,226 +388,7 @@ class _UniversityCardListState extends State<UniversityCardList> {
     return usesGridLayout;
   }
 
-  Widget _buildCards(List<University> universities) {
-    if (_usesGridLayout()) {
-      return _buildGrid(universities);
-    }
-    return _buildFullColumn(universities);
-  }
-
-  Widget _buildFullColumn(List<University> universities) {
-    return Column(children: _buildFullCards(universities));
-  }
-
-  List<Widget> _buildFullCards(List<University> universities) {
-    final cards = <Widget>[];
-    for (var index = 0; index < universities.length; index++) {
-      _appendFullCard(cards, universities[index], index);
-    }
-    return cards;
-  }
-
-  void _appendFullCard(List<Widget> cards, University university, int index) {
-    if (_needsGapBeforeCard(index)) {
-      cards.add(const SizedBox(height: _cardGap));
-    }
-    cards.add(_buildCard(university));
-  }
-
-  bool _needsGapBeforeCard(int index) {
-    final needsGap = index > 0;
-    return needsGap;
-  }
-
-  Widget _buildGrid(List<University> universities) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return _buildGridWrap(universities, constraints.maxWidth);
-      },
-    );
-  }
-
-  Widget _buildGridWrap(List<University> universities, double availableWidth) {
-    final cardWidth = _readGridCardWidth(availableWidth);
-    return Wrap(
-      spacing: _cardGap,
-      runSpacing: _cardGap,
-      children: _buildGridCards(universities, cardWidth),
-    );
-  }
-
-  double _readGridCardWidth(double availableWidth) {
-    final totalGap = _cardGap * (_gridColumnCount - 1);
-    final usableWidth = availableWidth - totalGap;
-    if (_usableWidthIsPositive(usableWidth)) {
-      return usableWidth / _gridColumnCount;
-    }
-    return availableWidth;
-  }
-
-  bool _usableWidthIsPositive(double usableWidth) {
-    final usableWidthIsPositive = usableWidth > 0;
-    return usableWidthIsPositive;
-  }
-
-  List<Widget> _buildGridCards(
-    List<University> universities,
-    double cardWidth,
-  ) {
-    final cards = <Widget>[];
-    for (final university in universities) {
-      _appendGridCard(cards, university, cardWidth);
-    }
-    return cards;
-  }
-
-  void _appendGridCard(
-    List<Widget> cards,
-    University university,
-    double cardWidth,
-  ) {
-    cards.add(_buildGridCard(university, cardWidth));
-  }
-
-  Widget _buildGridCard(University university, double cardWidth) {
-    return SizedBox(width: cardWidth, child: _buildCard(university));
-  }
-
   Widget _buildCard(University university) {
     return UniversityCard(university: university, layout: _visibleLayout);
-  }
-
-  List<University> _createPreviewUniversities() {
-    return [
-      _createNationalUniversityOfColombia(),
-      _createUniversityOfTheAndes(),
-      _createMassachusettsInstituteOfTechnology(),
-      _createUniversityOfOxford(),
-      _createUniversityOfBuenosAires(),
-      _createNationalAutonomousUniversityOfMexico(),
-      _createUniversityOfSaoPaulo(),
-      _createUniversityOfTokyo(),
-      _createSorbonneUniversity(),
-      _createUniversityOfToronto(),
-    ];
-  }
-
-  University _createNationalUniversityOfColombia() {
-    return const University(
-      name: 'Universidad Nacional de Colombia',
-      webPages: ['https://unal.edu.co'],
-      domains: ['unal.edu.co'],
-      stateProvince: 'Bogotá',
-      studentCount: null,
-      country: 'Colombia',
-      alphaTwoCode: 'CO',
-    );
-  }
-
-  University _createUniversityOfTheAndes() {
-    return const University(
-      webPages: ['https://uniandes.edu.co'],
-      name: 'Universidad de los Andes',
-      domains: ['uniandes.edu.co'],
-      stateProvince: 'Bogotá',
-      studentCount: 19000,
-      country: 'Colombia',
-      alphaTwoCode: 'CO',
-    );
-  }
-
-  University _createMassachusettsInstituteOfTechnology() {
-    return const University(
-      name: 'Massachusetts Institute of Technology',
-      webPages: ['https://www.mit.edu'],
-      stateProvince: 'Massachusetts',
-      country: 'United States',
-      domains: ['mit.edu'],
-      studentCount: 11900,
-      alphaTwoCode: 'US',
-    );
-  }
-
-  University _createUniversityOfOxford() {
-    return const University(
-      webPages: ['https://www.ox.ac.uk'],
-      name: 'University of Oxford',
-      country: 'United Kingdom',
-      domains: ['ox.ac.uk'],
-      studentCount: 26000,
-      stateProvince: null,
-      alphaTwoCode: 'GB',
-    );
-  }
-
-  University _createUniversityOfBuenosAires() {
-    return const University(
-      name: 'Universidad de Buenos Aires',
-      webPages: ['https://www.uba.ar'],
-      stateProvince: 'Buenos Aires',
-      studentCount: 320000,
-      country: 'Argentina',
-      domains: ['uba.ar'],
-      alphaTwoCode: 'AR',
-    );
-  }
-
-  University _createNationalAutonomousUniversityOfMexico() {
-    return const University(
-      name: 'Universidad Nacional Autónoma de México',
-      webPages: ['https://www.unam.mx'],
-      stateProvince: 'Ciudad de México',
-      domains: ['unam.mx'],
-      studentCount: 360000,
-      alphaTwoCode: 'MX',
-      country: 'Mexico',
-    );
-  }
-
-  University _createUniversityOfSaoPaulo() {
-    return const University(
-      name: 'Universidade de São Paulo',
-      webPages: ['https://www.usp.br'],
-      stateProvince: 'São Paulo',
-      domains: ['usp.br'],
-      studentCount: 90000,
-      alphaTwoCode: 'BR',
-      country: 'Brazil',
-    );
-  }
-
-  University _createUniversityOfTokyo() {
-    return const University(
-      webPages: ['https://www.u-tokyo.ac.jp'],
-      name: 'University of Tokyo',
-      domains: ['u-tokyo.ac.jp'],
-      stateProvince: 'Tokyo',
-      alphaTwoCode: 'JP',
-      country: 'Japan',
-    );
-  }
-
-  University _createSorbonneUniversity() {
-    return const University(
-      webPages: ['https://www.sorbonne-universite.fr'],
-      domains: ['sorbonne-universite.fr'],
-      stateProvince: 'Île-de-France',
-      name: 'Sorbonne Université',
-      studentCount: 55000,
-      alphaTwoCode: 'FR',
-      country: 'France',
-    );
-  }
-
-  University _createUniversityOfToronto() {
-    return const University(
-      webPages: ['https://www.utoronto.ca'],
-      name: 'University of Toronto',
-      stateProvince: 'Ontario',
-      domains: ['utoronto.ca'],
-      studentCount: 97000,
-      alphaTwoCode: 'CA',
-      country: 'Canada',
-    );
   }
 }
