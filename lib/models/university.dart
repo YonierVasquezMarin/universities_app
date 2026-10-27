@@ -49,6 +49,24 @@ class University {
     );
   }
 
+  bool hasUserProvidedData() {
+    final hasImage = _hasImageFileName();
+    final hasStudentCount = _hasStudentCount();
+    return hasImage || hasStudentCount;
+  }
+
+  bool _hasImageFileName() {
+    final storedFileName = imageFileName?.trim() ?? '';
+    final hasImageFileName = storedFileName.isNotEmpty;
+    return hasImageFileName;
+  }
+
+  bool _hasStudentCount() {
+    final hasStudentCount = studentCount != null;
+    final isStudentCountPositive = studentCount != null && studentCount! > 0;
+    return hasStudentCount && isStudentCountPositive;
+  }
+
   static University _createFromRemoteJson(Map<String, dynamic> json) {
     final alphaTwoCode = _readRequiredString(json, 'alpha_two_code');
     final stateProvince = _readOptionalString(json, 'state-province');
