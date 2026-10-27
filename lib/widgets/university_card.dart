@@ -107,7 +107,6 @@ class UniversityCard extends StatelessWidget {
           icon: Icons.groups_outlined,
           label: _buildStudentsLabel(),
         ),
-        const SizedBox(height: _rowGap),
         _buildFullFooter(context),
       ],
     );
