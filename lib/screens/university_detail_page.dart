@@ -27,7 +27,7 @@ class _UniversityDetailPageState extends State<UniversityDetailPage> {
   static const double _blockGap = 12;
   static const double _rowGap = 8;
   static const double _valueGap = 4;
-  static const double _saveButtonTopPadding = 4;
+  static const double _saveButtonTopPadding = 8;
   static const double _actionGap = 8;
   static const double _actionInset = 12;
   static const double _iconSize = 18;
@@ -470,6 +470,7 @@ class _UniversityDetailPageState extends State<UniversityDetailPage> {
   Widget _buildDomainSection(BuildContext context) {
     return _buildSection(
       context,
+      icon: Icons.language,
       title: _domainSectionTitle,
       content: _buildValueList(
         context,
@@ -482,6 +483,7 @@ class _UniversityDetailPageState extends State<UniversityDetailPage> {
   Widget _buildWebPageSection(BuildContext context) {
     return _buildSection(
       context,
+      icon: Icons.link,
       title: _webPageSectionTitle,
       content: _buildValueList(
         context,
@@ -493,22 +495,48 @@ class _UniversityDetailPageState extends State<UniversityDetailPage> {
 
   Widget _buildSection(
     BuildContext context, {
+    required IconData icon,
     required String title,
     required Widget content,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionTitle(context, title),
+        _buildSectionTitle(context, icon, title),
         const SizedBox(height: _rowGap),
         content,
       ],
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    final titleStyle = Theme.of(context).textTheme.titleMedium;
-    return Text(title, style: titleStyle);
+  Widget _buildSectionTitle(BuildContext context, IconData icon, String title) {
+    return Row(
+      children: [
+        _buildSectionIcon(context, icon),
+        const SizedBox(width: _iconGap),
+        Expanded(child: _buildSectionTitleText(context, title)),
+      ],
+    );
+  }
+
+  Widget _buildSectionIcon(BuildContext context, IconData icon) {
+    return Icon(icon, size: _iconSize, color: _readSectionTitleColor(context));
+  }
+
+  Widget _buildSectionTitleText(BuildContext context, String title) {
+    return Text(title, style: _readSectionTitleStyle(context));
+  }
+
+  TextStyle? _readSectionTitleStyle(BuildContext context) {
+    return Theme.of(context).textTheme.titleMedium;
+  }
+
+  Color _readSectionTitleColor(BuildContext context) {
+    final titleColor = _readSectionTitleStyle(context)?.color;
+    if (titleColor != null) {
+      return titleColor;
+    }
+    return Theme.of(context).colorScheme.onSurface;
   }
 
   Widget _buildValueList(
@@ -606,6 +634,7 @@ class _UniversityDetailPageState extends State<UniversityDetailPage> {
       labelText: _studentCountLabel,
       helperText: _studentCountHelper,
       helperMaxLines: 3,
+      border: OutlineInputBorder(),
     );
   }
 
