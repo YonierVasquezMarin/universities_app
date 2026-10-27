@@ -30,4 +30,29 @@ class UniversityService {
     _loadedUniversities = storedUniversities;
     return storedUniversities;
   }
+
+  List<University> replaceUniversity(int index, University university) {
+    final universities = List<University>.from(_readLoadedUniversities());
+    if (_indexIsOutside(universities, index)) {
+      return _readLoadedUniversities();
+    }
+    return _rememberReplacedUniversity(universities, index, university);
+  }
+
+  bool _indexIsOutside(List<University> universities, int index) {
+    final indexIsNegative = index < 0;
+    final indexIsPastEnd = index >= universities.length;
+    return indexIsNegative || indexIsPastEnd;
+  }
+
+  List<University> _rememberReplacedUniversity(
+    List<University> universities,
+    int index,
+    University university,
+  ) {
+    universities[index] = university;
+    final storedUniversities = List<University>.unmodifiable(universities);
+    _loadedUniversities = storedUniversities;
+    return storedUniversities;
+  }
 }

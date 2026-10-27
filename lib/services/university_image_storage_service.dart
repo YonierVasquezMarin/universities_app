@@ -15,6 +15,24 @@ class UniversityImageStorageService {
     }
   }
 
+  Future<File?> findStoredImage(String fileName) async {
+    try {
+      return await _findExistingImage(fileName);
+    } catch (exception) {
+      _registrarLogFailedToFindUniversityImage(exception);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteImage(String fileName) async {
+    try {
+      await _deleteStoredImage(fileName);
+    } catch (exception) {
+      _registrarLogFailedToDeleteUniversityImage(exception);
+      rethrow;
+    }
+  }
+
   Future<String> _copyImageIntoAppDocuments(File sourceFile) async {
     final storedFileName = _buildStoredFileName(sourceFile);
     final imagesDirectory = await _createImagesDirectory();
@@ -61,9 +79,48 @@ class UniversityImageStorageService {
     await sourceFile.copy(destinationPath);
   }
 
+  Future<File?> _findExistingImage(String fileName) async {
+    final imageFile = await _readStoredImageFile(fileName);
+    final imageExists = await imageFile.exists();
+    if (!imageExists) {
+      return null;
+    }
+    return imageFile;
+  }
+
+  Future<void> _deleteStoredImage(String fileName) async {
+    final imageFile = await _readStoredImageFile(fileName);
+    final imageExists = await imageFile.exists();
+    if (!imageExists) {
+      return;
+    }
+    await imageFile.delete();
+  }
+
+  Future<File> _readStoredImageFile(String fileName) async {
+    final imagesDirectory = await _createImagesDirectory();
+    return File('${imagesDirectory.path}/$fileName');
+  }
+
   void _registrarLogFailedToSaveUniversityImage(Object exception) {
     log(
       'Failed to save the university image in the app documents directory',
+      name: 'UniversityImageStorageService',
+      error: exception,
+    );
+  }
+
+  void _registrarLogFailedToFindUniversityImage(Object exception) {
+    log(
+      'Failed to find the university image in the app documents directory',
+      name: 'UniversityImageStorageService',
+      error: exception,
+    );
+  }
+
+  void _registrarLogFailedToDeleteUniversityImage(Object exception) {
+    log(
+      'Failed to delete the university image from the app documents directory',
       name: 'UniversityImageStorageService',
       error: exception,
     );

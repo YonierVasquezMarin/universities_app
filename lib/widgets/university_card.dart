@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:universities_app/models/university.dart';
+import 'package:universities_app/widgets/university_image_banner.dart';
 
 enum UniversityCardLayout { full, grid }
 
@@ -8,10 +9,12 @@ class UniversityCard extends StatelessWidget {
     super.key,
     required this.university,
     this.layout = UniversityCardLayout.full,
+    this.onTap,
   });
 
   final University university;
   final UniversityCardLayout layout;
+  final VoidCallback? onTap;
 
   static const double _fullHeaderHeight = 120;
   static const double _gridHeaderHeight = 88;
@@ -39,8 +42,21 @@ class UniversityCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       color: Theme.of(context).colorScheme.surface,
       shape: _buildCardShape(context),
-      child: _buildCardBody(context),
+      child: _buildTappableBody(context),
     );
+  }
+
+  Widget _buildTappableBody(BuildContext context) {
+    final body = _buildCardBody(context);
+    if (_respondsToTap()) {
+      return InkWell(onTap: onTap, child: body);
+    }
+    return body;
+  }
+
+  bool _respondsToTap() {
+    final respondsToTap = onTap != null;
+    return respondsToTap;
   }
 
   RoundedRectangleBorder _buildCardShape(BuildContext context) {
@@ -74,12 +90,7 @@ class UniversityCard extends StatelessWidget {
   Widget _buildFullHeader(BuildContext context) {
     return SizedBox(
       height: _fullHeaderHeight,
-      child: Stack(
-        children: [
-          _buildHeaderBackground(context),
-          Center(child: _buildHeaderIdentity(context)),
-        ],
-      ),
+      child: UniversityImageBanner(university: university),
     );
   }
 
@@ -144,12 +155,10 @@ class UniversityCard extends StatelessWidget {
       height: _gridHeaderHeight,
       child: Stack(
         children: [
-          _buildHeaderBackground(context),
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: _buildCompactHeaderIdentity(context),
+          Positioned.fill(
+            child: UniversityImageBanner(
+              university: university,
+              usesCompactIdentity: true,
             ),
           ),
           _buildGridCountryCode(context),
@@ -181,59 +190,6 @@ class UniversityCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeaderBackground(BuildContext context) {
-    return Positioned.fill(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _buildHeaderGradientColors(context),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Color> _buildHeaderGradientColors(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final softenedPrimary = Color.lerp(primary, Colors.white, 0.18) ?? primary;
-    return [primary, softenedPrimary];
-  }
-
-  Widget _buildHeaderIdentity(BuildContext context) {
-    return _buildHeaderIdentityContent(context, iconSize: 32, gap: 8);
-  }
-
-  Widget _buildCompactHeaderIdentity(BuildContext context) {
-    return _buildHeaderIdentityContent(context, iconSize: 24, gap: 4);
-  }
-
-  Widget _buildHeaderIdentityContent(
-    BuildContext context, {
-    required double iconSize,
-    required double gap,
-  }) {
-    final foregroundColor = Theme.of(context).colorScheme.onPrimary;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.school_outlined, color: foregroundColor, size: iconSize),
-        SizedBox(height: gap),
-        Text(_buildInitials(), style: _buildInitialsTextStyle(context)),
-      ],
-    );
-  }
-
-  TextStyle _buildInitialsTextStyle(BuildContext context) {
-    final foregroundColor = Theme.of(context).colorScheme.onPrimary;
-    final titleStyle = Theme.of(context).textTheme.titleLarge;
-    return (titleStyle ?? const TextStyle()).copyWith(
-      color: foregroundColor,
-      fontWeight: FontWeight.w600,
     );
   }
 
@@ -340,26 +296,6 @@ class UniversityCard extends StatelessWidget {
       color: colorScheme.onSecondaryContainer,
       fontWeight: FontWeight.w600,
     );
-  }
-
-  String _buildInitials() {
-    final words = _readNameWords();
-    final initials = words.take(2).map(_readWordInitial);
-    return initials.join().toUpperCase();
-  }
-
-  List<String> _readNameWords() {
-    final words = university.name.split(RegExp(r'\s+'));
-    return words.where(_wordHasContent).toList();
-  }
-
-  bool _wordHasContent(String word) {
-    final hasContent = word.trim().isNotEmpty;
-    return hasContent;
-  }
-
-  String _readWordInitial(String word) {
-    return word.substring(0, 1);
   }
 
   String _buildLocationLabel() {

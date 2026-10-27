@@ -49,6 +49,30 @@ class University {
     );
   }
 
+  University withUserProvidedData({
+    required String? imageFileName,
+    required int? studentCount,
+  }) {
+    return University(
+      alphaTwoCode: alphaTwoCode,
+      domains: _copyStringList(domains),
+      country: country,
+      stateProvince: stateProvince,
+      webPages: _copyStringList(webPages),
+      name: name,
+      imageFileName: _normalizeImageFileName(imageFileName),
+      studentCount: studentCount,
+    );
+  }
+
+  String? _normalizeImageFileName(String? imageFileName) {
+    final storedFileName = imageFileName?.trim() ?? '';
+    if (storedFileName.isEmpty) {
+      return null;
+    }
+    return storedFileName;
+  }
+
   bool hasUserProvidedData() {
     final hasImage = _hasImageFileName();
     final hasStudentCount = _hasStudentCount();

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:universities_app/models/university.dart';
+import 'package:universities_app/screens/university_detail_page.dart';
 import 'package:universities_app/services/university_service.dart';
 import 'package:universities_app/widgets/university_card.dart';
 
@@ -384,6 +385,67 @@ class _UniversityCardListState extends State<UniversityCardList> {
   }
 
   Widget _buildCard(University university) {
-    return UniversityCard(university: university, layout: _visibleLayout);
+    return UniversityCard(
+      university: university,
+      layout: _visibleLayout,
+      onTap: () => _openUniversityDetail(university),
+    );
+  }
+
+  void _openUniversityDetail(University university) {
+    unawaited(_openAndApplyUniversityDetail(university));
+  }
+
+  Future<void> _openAndApplyUniversityDetail(University university) async {
+    final storedIndex = _readStoredUniversityIndex(university);
+    final updatedUniversity = await _pushUniversityDetail(university);
+    _applyUpdatedUniversityWhenReturned(storedIndex, updatedUniversity);
+  }
+
+  int _readStoredUniversityIndex(University university) {
+    return _universities.indexOf(university);
+  }
+
+  Future<University?> _pushUniversityDetail(University university) {
+    return Navigator.of(context).push<University>(
+      MaterialPageRoute<University>(
+        builder: (context) => UniversityDetailPage(university: university),
+      ),
+    );
+  }
+
+  void _applyUpdatedUniversityWhenReturned(
+    int storedIndex,
+    University? university,
+  ) {
+    final updatedUniversity = university;
+    if (updatedUniversity == null) {
+      return;
+    }
+    if (!_canReplaceStoredUniversity(storedIndex)) {
+      return;
+    }
+    _applyUpdatedUniversity(storedIndex, updatedUniversity);
+  }
+
+  bool _canReplaceStoredUniversity(int storedIndex) {
+    if (_widgetIsUnmounted()) {
+      return false;
+    }
+    final indexIsStored = storedIndex >= 0;
+    return indexIsStored;
+  }
+
+  void _applyUpdatedUniversity(int storedIndex, University university) {
+    final universities = _universityService.replaceUniversity(
+      storedIndex,
+      university,
+    );
+    if (_widgetIsUnmounted()) {
+      return;
+    }
+    setState(() {
+      _universities = universities;
+    });
   }
 }
