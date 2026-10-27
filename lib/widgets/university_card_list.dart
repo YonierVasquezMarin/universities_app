@@ -26,7 +26,6 @@ class _UniversityCardListState extends State<UniversityCardList> {
   static const double _fullMaxWidth = 480;
   static const double _gridMaxWidth = 720;
   static const int _gridColumnCount = 2;
-  static const int _visibleUniversityLimit = 20;
   static const String _emptyMessage = 'Sin datos';
   static const String _errorMessage = 'No fue posible cargar las universidades';
   static const String _retryLabel = 'Reintentar';
@@ -63,14 +62,10 @@ class _UniversityCardListState extends State<UniversityCardList> {
       return;
     }
     setState(() {
-      _universities = _readUniversitiesToPaint(universities);
+      _universities = universities;
       _isLoadingUniversities = false;
       _failedToLoadUniversities = false;
     });
-  }
-
-  List<University> _readUniversitiesToPaint(List<University> universities) {
-    return universities.take(_visibleUniversityLimit).toList();
   }
 
   void _showUniversityLoadFailure() {
