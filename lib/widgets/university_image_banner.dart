@@ -29,6 +29,54 @@ class _UniversityImageBannerState extends State<UniversityImageBanner> {
   static const double _compactIconGap = 4;
   static const double _iconSize = 32;
   static const double _iconGap = 8;
+  static const double _gradientLightenAmount = 0.24;
+  static const int _fallbackColorGroupIndex = 7;
+  static const Color _placeholderForeground = Colors.white;
+  static const List<String> _letterGroups = [
+    'ABC',
+    'DEF',
+    'GHI',
+    'JKL',
+    'MNO',
+    'PQR',
+    'STU',
+    'VWXYZ',
+  ];
+  static const List<Color> _placeholderBaseColors = [
+    Color(0xFF146C43),
+    Color(0xFF0E6A62),
+    Color(0xFF8A5A12),
+    Color(0xFF8C3E1A),
+    Color(0xFF8A2E48),
+    Color(0xFF5C3478),
+    Color(0xFF722433),
+    Color(0xFF4A5318),
+  ];
+  static const Map<String, String> _accentedLetters = {
+    'Á': 'A',
+    'À': 'A',
+    'Â': 'A',
+    'Ä': 'A',
+    'Ã': 'A',
+    'É': 'E',
+    'È': 'E',
+    'Ê': 'E',
+    'Ë': 'E',
+    'Í': 'I',
+    'Ì': 'I',
+    'Î': 'I',
+    'Ï': 'I',
+    'Ó': 'O',
+    'Ò': 'O',
+    'Ô': 'O',
+    'Ö': 'O',
+    'Õ': 'O',
+    'Ú': 'U',
+    'Ù': 'U',
+    'Û': 'U',
+    'Ü': 'U',
+    'Ñ': 'N',
+  };
 
   final UniversityImageStorageService _imageStorageService =
       UniversityImageStorageService();
@@ -199,26 +247,71 @@ class _UniversityImageBannerState extends State<UniversityImageBanner> {
   Widget _buildPlaceholder(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
-      children: [_buildGradient(context), _buildIdentity(context)],
+      children: [_buildGradient(), _buildIdentity(context)],
     );
   }
 
-  Widget _buildGradient(BuildContext context) {
+  Widget _buildGradient() {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: _buildGradientColors(context),
+          colors: _buildGradientColors(),
         ),
       ),
     );
   }
 
-  List<Color> _buildGradientColors(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final softenedPrimary = Color.lerp(primary, Colors.white, 0.18) ?? primary;
-    return [primary, softenedPrimary];
+  List<Color> _buildGradientColors() {
+    final baseColor = _readPlaceholderBaseColor();
+    final softenedColor = _softenPlaceholderColor(baseColor);
+    return [baseColor, softenedColor];
+  }
+
+  Color _readPlaceholderBaseColor() {
+    final groupIndex = _readColorGroupIndex();
+    return _placeholderBaseColors[groupIndex];
+  }
+
+  int _readColorGroupIndex() {
+    final letter = _readNormalizedInitial();
+    for (var index = 0; index < _letterGroups.length; index++) {
+      if (_groupContainsLetter(_letterGroups[index], letter)) {
+        return index;
+      }
+    }
+    return _fallbackColorGroupIndex;
+  }
+
+  bool _groupContainsLetter(String group, String letter) {
+    if (letter.isEmpty) {
+      return false;
+    }
+    return group.contains(letter);
+  }
+
+  String _readNormalizedInitial() {
+    final words = _readNameWords();
+    if (words.isEmpty) {
+      return '';
+    }
+    final initial = _readWordInitial(words.first).toUpperCase();
+    return _normalizeLetter(initial);
+  }
+
+  String _normalizeLetter(String letter) {
+    final normalizedLetter = _accentedLetters[letter];
+    return normalizedLetter ?? letter;
+  }
+
+  Color _softenPlaceholderColor(Color baseColor) {
+    final softenedColor = Color.lerp(
+      baseColor,
+      Colors.white,
+      _gradientLightenAmount,
+    );
+    return softenedColor ?? baseColor;
   }
 
   Widget _buildIdentity(BuildContext context) {
@@ -251,11 +344,14 @@ class _UniversityImageBannerState extends State<UniversityImageBanner> {
     double iconSize = _iconSize,
     double gap = _iconGap,
   }) {
-    final foregroundColor = Theme.of(context).colorScheme.onPrimary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.school_outlined, color: foregroundColor, size: iconSize),
+        Icon(
+          Icons.school_outlined,
+          color: _placeholderForeground,
+          size: iconSize,
+        ),
         SizedBox(height: gap),
         Text(_buildInitials(), style: _buildInitialsTextStyle(context)),
       ],
@@ -263,10 +359,9 @@ class _UniversityImageBannerState extends State<UniversityImageBanner> {
   }
 
   TextStyle _buildInitialsTextStyle(BuildContext context) {
-    final foregroundColor = Theme.of(context).colorScheme.onPrimary;
     final titleStyle = Theme.of(context).textTheme.titleLarge;
     return (titleStyle ?? const TextStyle()).copyWith(
-      color: foregroundColor,
+      color: _placeholderForeground,
       fontWeight: FontWeight.w600,
     );
   }
